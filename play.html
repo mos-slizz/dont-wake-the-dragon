@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1230">
+<title>Don't Wake the Dragon</title>
+<style>
+  :root { --ink:#f5f0ff; --dim:#b9aee0; --gold:#f6c945; --bad:#ff5f5f; --good:#7dffa0; --bg:#1a1230; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  [hidden] { display:none !important; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family:"Fredoka","Arial Rounded MT Bold",system-ui,sans-serif; overflow:hidden; overscroll-behavior:none; touch-action:manipulation; }
+  body { display:flex; flex-direction:column; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  section[hidden] { display:none; }
+  section { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:18px; gap:10px; min-height:0; }
+  h1 { font-size:30px; margin:0; } h2 { font-size:28px; margin:0; } p { margin:4px 0; font-size:18px; } .dim { color:var(--dim); } .big { font-size:24px; }
+  button { font:inherit; }
+  .btn { font-size:22px; font-weight:700; padding:16px 22px; border:0; border-radius:16px; background:var(--gold); color:#2b1d00; width:100%; max-width:420px; }
+  .btn:disabled { opacity:.5; }
+  .btn.sec { background:#3b2d5e; color:var(--ink); }
+  input { font:inherit; font-size:22px; padding:12px 14px; border-radius:12px; border:2px solid #4b3a7a; background:#100a20; color:var(--ink); width:100%; max-width:420px; text-align:center; }
+  #avatars { display:grid; grid-template-columns:repeat(8,1fr); gap:6px; width:100%; max-width:420px; }
+  #avatars button { font-size:26px; padding:6px 0; border-radius:10px; border:2px solid transparent; background:#2a1f4a; }
+  #avatars button.sel { border-color:var(--gold); background:#3b2d5e; }
+  #tiers { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; width:100%; max-width:420px; }
+  #tiers button { display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 2px; border-radius:12px; border:2px solid transparent; background:#2a1f4a; color:var(--ink); font-size:22px; }
+  #tiers button b { font-size:13px; } #tiers button small { font-size:11px; color:var(--dim); }
+  #tiers button.sel { border-color:var(--gold); background:#3b2d5e; }
+  label { color:var(--dim); font-size:15px; }
+  #conn { position:fixed; top:6px; right:10px; font-size:12px; color:var(--dim); z-index:5; }
+  #conn[data-st="connected"] { color:var(--good); }
+  #flash { position:fixed; inset:0; pointer-events:none; transition:opacity .3s; z-index:9; }
+  .topbar { width:100%; display:flex; align-items:center; gap:10px; font-size:18px; }
+  .topbar .meter { flex:1; height:12px; background:rgba(255,255,255,.12); border-radius:6px; overflow:hidden; }
+  .topbar .meter i { display:block; height:100%; width:0; background:linear-gradient(90deg,#7dffa0,#ffd75a 45%,#ff5f5f 80%); transition:width .15s linear; }
+  #face { font-size:30px; }
+  /* lookout */
+  #stillring { width:min(70vw,300px); height:min(70vw,300px); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:90px; position:relative;
+    background:conic-gradient(from -90deg, var(--good) 0 calc((1 - var(--n)) * 100%), var(--bad) calc((1 - var(--n)) * 100%) 100%);
+    box-shadow:0 0 0 12px rgba(255,255,255,.06); transition:box-shadow .2s; }
+  #stillring::after { content:""; position:absolute; inset:16px; border-radius:50%; background:var(--bg); }
+  #stillring span { position:relative; z-index:1; }
+  #stillring[data-band="0"] { box-shadow:0 0 40px 10px rgba(125,255,160,.35); }
+  #stillring[data-band="3"], #stillring[data-band="4"] { box-shadow:0 0 40px 14px rgba(255,95,95,.5); animation:shake .1s infinite; }
+  @keyframes shake { 0%{transform:translate(-3px,0)} 50%{transform:translate(3px,1px)} 100%{transform:translate(-2px,-1px)} }
+  #stillline { font-size:26px; font-weight:700; min-height:64px; display:flex; align-items:center; }
+  #egg { width:min(60vw,260px); height:min(70vw,320px); border-radius:50% 50% 50% 50% / 60% 60% 40% 40%; background:radial-gradient(circle at 35% 30%, #fff7d6, #e8c96b 70%, #b8952e); display:flex; align-items:center; justify-content:center; font-size:22px; color:#5a4410; font-weight:700; touch-action:none; user-select:none; box-shadow:0 12px 30px rgba(0,0,0,.5); }
+  #egg.held { background:radial-gradient(circle at 35% 30%, #e6ffef, #7dffa0 70%, #2e9c58); }
+  body[data-stage="3"] #lookout, body[data-stage="4"] #lookout { background:#3a0f14; }
+  /* thief */
+  #thief { padding:8px; gap:6px; justify-content:flex-start; }
+  #taskwrap { flex:1; width:100%; border-radius:16px; overflow:hidden; min-height:0; }
+  #taskprogwrap { width:100%; height:10px; background:rgba(255,255,255,.12); border-radius:5px; overflow:hidden; } #taskprog { display:block; height:100%; width:0; background:var(--good); transition:width .1s; }
+  /* tiptoe */
+  #level { position:relative; width:100%; max-width:420px; height:70px; background:rgba(255,255,255,.1); border-radius:35px; margin:10px 0; }
+  #tttarget { position:absolute; top:6px; bottom:6px; width:54px; margin-left:-27px; border:3px dashed var(--gold); border-radius:29px; }
+  #bubble { position:absolute; top:12px; width:46px; height:46px; margin-left:-23px; border-radius:50%; background:#8fe3ff; box-shadow:inset -6px -6px 12px rgba(0,0,0,.25); transition:left .08s linear; }
+  #bubble[data-ok="1"] { background:var(--good); }
+  #ttslider { width:100%; max-width:420px; }
+  .hold { width:100%; max-width:420px; height:14px; background:rgba(255,255,255,.12); border-radius:7px; overflow:hidden; } .hold i { display:block; height:100%; width:0; background:var(--good); }
+  #ttdir { font-size:34px; font-weight:700; }
+  /* calib */
+  #calibbar { width:100%; max-width:420px; height:16px; background:rgba(255,255,255,.12); border-radius:8px; overflow:hidden; } #calibfill { display:block; height:100%; width:0; background:var(--good); }
+  #cd { font-size:140px; font-weight:700; }
+  .aw { background:rgba(255,255,255,.08); border-radius:14px; padding:10px 14px; font-size:20px; margin:6px 0; } .aw small { color:var(--dim); }
+  .roast { font-size:80px; }
+  .hint { font-size:15px; color:var(--dim); max-width:420px; }
+</style>
+</head>
+<body>
+<div id="conn">● …</div>
+<div id="flash" hidden></div>
+
+<section data-screen="join" style="justify-content:flex-start;overflow-y:auto">
+  <h1>🐉 Don't Wake the Dragon</h1>
+  <div id="roomwrap" hidden><label>Room code (on the TV)</label><input id="roomcode" placeholder="ABCD" autocomplete="off" autocapitalize="characters"></div>
+  <label>Your name</label><input id="name" placeholder="Sneaky name" maxlength="14" autocomplete="off">
+  <label>Pick a face</label><div id="avatars"></div>
+  <label>Who are you?</label><div id="tiers"></div>
+  <button id="joinbtn" class="btn">Join &amp; wake up my sensors</button>
+  <p class="hint">Tap <b>Allow</b> when your phone asks about motion. You'll hold this phone very, very still.</p>
+</section>
+
+<section data-screen="wait" hidden><h2>🔗</h2><p id="waitmsg">Connecting…</p></section>
+
+<section data-screen="lobby">
+  <h2 id="lobbywho"></h2>
+  <p class="big">You're in! 👀 Look at the TV.</p>
+  <p class="dim">Tonight's dragon is <b id="lobbydragon"></b>. It has a headache. Be nice.</p>
+  <p id="lobbysens" class="hint"></p>
+  <p id="lobbycount" class="dim"></p>
+  <button class="btn capbtn" hidden>⭐ Everyone's in — start!</button>
+</section>
+
+<section data-screen="calib">
+  <h2>🤫 Hold still…</h2>
+  <p id="calibrole" class="big"></p>
+  <div id="calibbar"><i id="calibfill"></i></div>
+  <p id="calibmsg">Measuring your wobble.</p>
+  <p class="hint">Hold the phone in both hands, elbows on your lap if you can. Breathe like a ninja.</p>
+</section>
+
+<section data-screen="countdown"><div id="cd">3</div><p class="big">Get ready to be a statue</p></section>
+
+<section data-screen="lookout" id="lookout">
+  <div class="topbar"><span id="face">😴</span><div class="meter"><i id="meterfill"></i></div><span id="stagename" class="dim">zzz</span></div>
+  <p id="lkthief" class="dim"></p>
+  <div id="stillring"><span>👀</span></div>
+  <div id="egg" hidden>keep a thumb here</div>
+  <div id="stillline">Statue mode.</div>
+  <p id="lkitems"></p>
+  <p class="hint">Your job: DON'T MOVE. Every wobble goes straight to the dragon's ear, with your name on it.</p>
+</section>
+
+<section data-screen="thief" id="thief">
+  <div class="topbar"><span id="thnap">🌙</span><span id="taskname" style="flex:1">…</span><span id="thitems"></span></div>
+  <div id="taskprogwrap"><i id="taskprog"></i></div>
+  <div id="taskwrap"></div>
+</section>
+
+<section data-screen="tiptoe">
+  <h2>🩰 Tiptoe out</h2>
+  <p id="ttstep" class="dim"></p>
+  <div id="ttdir">⬅️</div>
+  <div id="level"><div id="tttarget"></div><div id="bubble"></div></div>
+  <input type="range" id="ttslider" min="-60" max="60" value="0" hidden>
+  <p id="ttmsg" class="big"></p>
+  <div class="hold"><i id="tthold"></i></div>
+  <p id="ttwho" class="dim"></p>
+  <p class="hint">Everyone together, slooowly. Sudden moves still count as noise.</p>
+</section>
+
+<section data-screen="result">
+  <div id="resbody"></div>
+  <button class="btn capbtn" id="resnext" hidden>Next heist ▶</button>
+  <p class="hint">Look at the TV for everyone's awards.</p>
+</section>
+
+<script src="vendor/mqtt.min.js"></script>
+<script src="js/shared.js"></script>
+<script src="js/tasks.js"></script>
+<script src="js/play.js"></script>
+</body>
+</html>

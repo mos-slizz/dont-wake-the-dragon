@@ -45,7 +45,8 @@
     createRoom();
   });
 
-  function fitStage() { const s = Math.min(innerWidth / 1600, innerHeight / 900); el.stagewrap.style.transform = `translate(-50%,-50%) scale(${s})`; }
+  let lastFit = '';
+  function fitStage() { const key = innerWidth + 'x' + innerHeight; if (key === lastFit) return; lastFit = key; const s = Math.min(innerWidth / 1600, innerHeight / 900); el.stagewrap.style.transform = `translate(-50%,-50%) scale(${s})`; }
 
   async function createRoom() {
     G.room = sessionStorage.getItem('dwtd_room') || DWTD.roomCode();
@@ -258,7 +259,7 @@
     if (now - lastRaf > 400) { renderHud(); DV.frame(now); }
   }
   let lastRaf = 0;
-  function loop(now) { lastRaf = now; renderHud(); DV.frame(now); requestAnimationFrame(loop); }
+  function loop(now) { lastRaf = now; fitStage(); renderHud(); DV.frame(now); requestAnimationFrame(loop); }
 
   function tickMeter(dt, t) {
     if (G.awake) return;

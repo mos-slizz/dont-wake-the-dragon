@@ -4,7 +4,7 @@
   const { clamp, pick, fmt } = DWTD;
   const $ = (s) => document.querySelector(s);
   const screens = {};
-  const P = { room: null, pid: null, name: '', em: '🦊', tier: 'squire', relay: null, state: null, calibFor: 0, calib: null, mode: 'motion', task: null, taskType: null, sendTimer: null, hbTimer: null, lastEvTs: 0, touch: { down: false, x: 0, y: 0, moved: 0 }, phaseShown: null, thiefFor: 0, lastLine: 0, resultFor: null, ttFor: null, blameUntil: 0 };
+  const P = { room: null, pid: null, name: '', em: 'fox', tier: 'squire', relay: null, state: null, calibFor: 0, calib: null, mode: 'motion', task: null, taskType: null, sendTimer: null, hbTimer: null, lastEvTs: 0, touch: { down: false, x: 0, y: 0, moved: 0 }, phaseShown: null, thiefFor: 0, lastLine: 0, resultFor: null, ttFor: null, blameUntil: 0 };
 
   // ---------- Sensors ----------
   const Sensors = {
@@ -20,7 +20,7 @@
         let s = 0;
         if (this.prevA) s += Math.hypot(a.x - this.prevA.x, a.y - this.prevA.y, a.z - this.prevA.z);
         this.prevA = { x: a.x, y: a.y, z: a.z };
-        const r = e.rotationRate; if (r && r.alpha != null) s += Math.hypot(r.alpha, r.beta, r.gamma) / 40;
+        const r = e.rotationRate; if (r && r.alpha != null) s += Math.hypot(r.alpha, r.beta, r.gamma) / 25;
         this.samples.push([now, s]); if (this.samples.length > 60) this.samples.shift();
         this.got = true;
       });
@@ -43,7 +43,7 @@
     document.querySelectorAll('section[data-screen]').forEach(s => screens[s.dataset.screen] = s);
     P.room = (new URLSearchParams(location.search).get('r') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
     const saved = JSON.parse(localStorage.getItem('dwtd_me') || 'null');
-    if (saved) { P.name = saved.name; P.em = saved.em; P.tier = saved.tier; }
+    if (saved) { P.name = saved.name; P.em = ART.AVATARS[saved.em] ? saved.em : 'fox'; P.tier = saved.tier; }
     P.pid = sessionStorage.getItem('dwtd_pid') || DWTD.uid(8); sessionStorage.setItem('dwtd_pid', P.pid);
     buildJoin();
     show('join');
@@ -58,9 +58,9 @@
   function buildJoin() {
     $('#roomcode').value = P.room; $('#roomwrap').hidden = !!P.room;
     $('#name').value = P.name;
-    const av = $('#avatars'); av.innerHTML = DWTD.AVATARS.map(e => `<button type="button" class="${e === P.em ? 'sel' : ''}" data-em="${e}">${e}</button>`).join('');
+    const av = $('#avatars'); av.innerHTML = DWTD.AVATARS.map(e => `<button type="button" class="${e === P.em ? 'sel' : ''}" data-em="${e}" aria-label="${ART.avatarName(e)}">${ART.avatar(e)}</button>`).join('');
     av.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.em = b.dataset.em; av.querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b)); });
-    const tw = $('#tiers'); tw.innerHTML = DWTD.TIERS.map(t => `<button type="button" class="${t.key === P.tier ? 'sel' : ''}" data-tier="${t.key}">${t.em}<b>${t.label}</b><small>${t.sub}</small></button>`).join('');
+    const tw = $('#tiers'); tw.innerHTML = DWTD.TIERS.map(t => `<button type="button" class="${t.key === P.tier ? 'sel' : ''}" data-tier="${t.key}">${ART.icon(t.icon)}<b>${t.label}</b><small>${t.sub}</small></button>`).join('');
     tw.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.tier = b.dataset.tier; tw.querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b)); });
   }
 
@@ -113,8 +113,8 @@
   function noise() {
     if (P.mode === 'touch' && P.state && P.state.ph === 'tiptoe') { const v = +$('#ttslider').value; const d = Math.abs(v - (P.lastSlider == null ? v : P.lastSlider)); P.lastSlider = v; return clamp(d / 25, 0, 3); }
     if (P.mode === 'touch') { const t = P.touch; if (!t.down) return 1.2; const n = t.moved / 40; t.moved *= 0.5; return clamp(n, 0, 3); }
-    const raw = Sensors.raw(); const c = P.calib || { base: 0.08, sd: 0.04 };
-    return clamp((raw - c.base - 2 * c.sd - 0.02) / 1.0, 0, 3);
+    const raw = Sensors.raw(); const c = P.calib || { base: 0.08, sd: 0.03 };
+    return clamp((raw - c.base - 1.2 * c.sd - 0.01) / 0.3, 0, 3);
   }
   function startCalib(n) {
     P.calibFor = n; P.calib = null;
@@ -127,8 +127,8 @@
         clearInterval(iv);
         const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
         const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
-        P.calib = { base: mean, sd: Math.max(sd, 0.015) };
-        $('#calibmsg').textContent = pick(['Got it. You\'re a rock. 🗿', 'Locked in. Don\'t breathe weird.', 'Perfect. Now… don\'t.', 'Calibrated. The dragon knows your wobble now.']);
+        P.calib = { base: Math.min(mean, 0.25), sd: clamp(sd, 0.012, 0.08) };
+        $('#calibmsg').textContent = pick(['Got it. You\'re a rock.', 'Locked in. Don\'t breathe weird.', 'Perfect. Now… don\'t.', 'Calibrated. The dragon knows your wobble now.']);
         send({ t: 'calib', ok: true, sens: 'motion', base: +mean.toFixed(3), sd: +sd.toFixed(3) });
       }
     }, 50);
@@ -153,21 +153,20 @@
   }
 
   // ---------- render ----------
-  const FACES = ['😴', '😬', '😖', '👁️', '🔥'];
   function render() {
     const s = P.state; const my = me();
     if (!my) { show('wait'); $('#waitmsg').textContent = 'Joining…'; sendJoin(); return; }
     document.querySelectorAll('.capbtn').forEach(b => b.hidden = !my.cap);
-    $('#meterfill').style.width = s.m + '%'; $('#face').textContent = FACES[s.st]; $('#stagename').textContent = DWTD.STAGES[s.st].label;
+    $('#meterfill').style.width = s.m + '%'; $('#face').dataset.s = s.st; $('#stagename').textContent = DWTD.STAGES[s.st].label;
     if (s.ph === 'lobby') {
-      show('lobby'); $('#lobbywho').textContent = `${my.em} ${my.name}`; $('#lobbydragon').textContent = s.dn;
-      $('#lobbysens').textContent = P.mode === 'touch' ? '👆 No motion sensors found on this phone — you\'ll play in touch mode (keep a thumb on the egg).' : '📱 Motion sensors: ready.';
+      show('lobby'); $('#lobbywho').innerHTML = `${ART.avatar(my.em)}<span>${my.name}</span>`; $('#lobbydragon').textContent = s.dn;
+      $('#lobbysens').textContent = P.mode === 'touch' ? 'No motion sensors found on this phone, so you\'ll play in touch mode: keep a thumb on the egg.' : 'Motion sensors: ready.';
       $('#lobbycount').textContent = `${s.pl.filter(p => p.on).length} sneak${s.pl.length === 1 ? '' : 's'} in the room`;
       if (P.task) { P.task.destroy(); P.task = null; }
       return;
     }
     if (s.ph === 'calib') {
-      show('calib'); $('#calibrole').textContent = my.role === 'thief' ? `🥷 You're the THIEF this time. Job: ${s.task && s.task.type === 'marble' ? 'balance the marble' : 'thread the gem'}.` : '👀 You\'re a LOOKOUT. Job: be furniture.';
+      show('calib'); $('#calibrole').innerHTML = my.role === 'thief' ? `${ART.icon('mask', 'gold')} You're the THIEF this time. Job: ${s.task && s.task.type === 'marble' ? 'balance the marble' : 'thread the gem'}.` : `${ART.icon('eye')} You're a LOOKOUT. Job: be furniture.`;
       if (s.h && P.calibFor !== s.h.n) { $('#calibfill').style.width = '0%'; $('#calibmsg').textContent = P.mode === 'touch' ? 'Touch mode: keep a thumb on the egg during heists.' : 'Hold still… measuring your wobble.'; startCalib(s.h.n); }
       return;
     }
@@ -180,16 +179,17 @@
     if (s.ph === 'result' || s.ph === 'gameover') { renderResult(s, my); return; }
   }
 
+  function setItems(el, s) { if (!s.h) return; const k = s.h.got + '/' + s.h.items; if (el.dataset.k === k) return; el.dataset.k = k; el.innerHTML = Array.from({ length: s.h.items }, (_, i) => ART.icon(i < s.h.got ? 'bag' : 'slot', i < s.h.got ? 'gold' : 'dim')).join(''); }
   function renderLookout(s) {
     if (P.phaseShown !== 'lookout') { show('lookout'); if (P.task) { P.task.destroy(); P.task = null; } }
     $('#egg').hidden = P.mode !== 'touch'; $('#stillring').hidden = P.mode === 'touch';
     const n = P.lastN || 0; const band = n < 0.08 ? 0 : n < 0.25 ? 1 : n < 0.5 ? 2 : n < 1 ? 3 : 4;
     const ring = $('#stillring'); ring.style.setProperty('--n', clamp(n, 0, 1)); ring.dataset.band = band;
     const now = Date.now();
-    if (now < P.blameUntil) $('#stillline').textContent = pick(['THE TV IS LOOKING AT YOU.', 'That was you. Everyone knows.', 'Shh!! 🫵']);
+    if (now < P.blameUntil) $('#stillline').textContent = pick(['THE TV IS LOOKING AT YOU.', 'That was you. Everyone knows.', 'Shh!!']);
     else if (now - P.lastLine > 2200) { P.lastLine = now; $('#stillline').textContent = pick(DWTD.STILL_LINES[band]); }
-    $('#lkitems').textContent = s.h ? `${'💰'.repeat(s.h.got)}${'⬜'.repeat(s.h.items - s.h.got)}` : '';
-    const thief = s.pl.find(p => p.id === s.h.tid); $('#lkthief').textContent = thief ? `${thief.em} ${thief.name} is stealing…` : '';
+    setItems($('#lkitems'), s);
+    const thief = s.pl.find(p => p.id === s.h.tid); const tk = thief ? thief.id : ''; if ($('#lkthief').dataset.k !== tk) { $('#lkthief').dataset.k = tk; $('#lkthief').innerHTML = thief ? `${ART.avatar(thief.em)} ${thief.name} is stealing…` : ''; }
     document.body.dataset.stage = s.st;
   }
   function renderThief(s) {
@@ -203,23 +203,23 @@
         onDrop: (k) => { send({ t: 'task', ev: k }); },
       });
       if (type === 'marble' && P.task.setTouchFallback) P.task.setTouchFallback(!Sensors.gotOrient);
-      $('#taskname').textContent = type === 'marble' ? '🔮 Balance the marble in the ring' : '💎 Thread the gem along the path';
+      $('#taskname').innerHTML = type === 'marble' ? ART.icon('marble') + ' Balance the marble in the ring' : ART.icon('gem') + ' Thread the gem along the path';
       P.tiltTimer && clearInterval(P.tiltTimer);
       P.tiltTimer = setInterval(() => { if (P.task && P.task.motion) P.task.motion(Sensors.tilt); }, 33);
     }
-    $('#thitems').textContent = s.h ? `${'💰'.repeat(s.h.got)}${'⬜'.repeat(s.h.items - s.h.got)}` : '';
-    $('#thnap').textContent = s.h ? `🌙 ${s.h.nap}s` : '';
+    setItems($('#thitems'), s);
+    $('#thnap').innerHTML = s.h ? `${ART.icon('moon')} ${s.h.nap}s` : '';
   }
   function renderTiptoe(s) {
     if (P.phaseShown !== 'tiptoe') { show('tiptoe'); if (P.task) { P.task.destroy(); P.task = null; } clearInterval(P.tiltTimer); if (P.mode === 'touch') $('#ttslider').value = 0; }
     const tt = s.tt; if (!tt) return;
-    $('#ttdir').textContent = tt.target === 0 ? '📱 Hold FLAT' : tt.target < 0 ? `⬅️ Lean LEFT ${-tt.target}°` : `➡️ Lean RIGHT ${tt.target}°`;
+    const dir = tt.target === 0 ? ART.icon('flat') + ' Hold FLAT' : tt.target < 0 ? `${ART.icon('left')} Lean LEFT ${-tt.target}°` : `${ART.icon('right')} Lean RIGHT ${tt.target}°`; if ($('#ttdir').dataset.k !== dir) { $('#ttdir').dataset.k = dir; $('#ttdir').innerHTML = dir; }
     $('#ttstep').textContent = `Step ${tt.step + 1} of ${tt.steps}`;
     const a = P.mode === 'touch' ? +$('#ttslider').value : (Sensors.tilt.gamma || 0);
     const ok = tt.ok.includes(P.pid);
     const bub = $('#bubble'); bub.style.left = clamp(50 + a / 90 * 50, 2, 98) + '%'; bub.dataset.ok = ok ? '1' : '0';
     $('#tttarget').style.left = clamp(50 + tt.target / 90 * 50, 2, 98) + '%';
-    $('#ttmsg').textContent = ok ? pick(['Hold it… 🤫', 'Perfect. Freeze.', 'Yes. Like that.']) : (Math.abs(a) < Math.abs(tt.target) - 13 ? 'More…' : Math.abs(a) > Math.abs(tt.target) + 13 ? 'Too far! Back a bit.' : 'Get to the target');
+    $('#ttmsg').textContent = ok ? pick(['Hold it…', 'Perfect. Freeze.', 'Yes. Like that.']) : (Math.abs(a) < Math.abs(tt.target) - 13 ? 'More…' : Math.abs(a) > Math.abs(tt.target) + 13 ? 'Too far! Back a bit.' : 'Get to the target');
     $('#tthold').style.width = tt.hold * 100 + '%';
     $('#ttwho').textContent = `${tt.ok.length} / ${s.pl.filter(p => p.on).length} in position`;
     $('#ttslider').hidden = P.mode !== 'touch';
@@ -229,12 +229,12 @@
     const key = s.ph + ':' + (s.h ? s.h.n : 0) + ':' + r.win;
     if (P.resultFor === key) return; P.resultFor = key;
     show('result'); if (P.task) { P.task.destroy(); P.task = null; } clearInterval(P.tiltTimer);
-    const awards = (r.awards || []).filter(a => a.pid === P.pid).map(a => { const aw = DWTD.AWARDS[a.k]; return `<div class="aw">${aw.em} <b>${aw.title}</b><br><small>${aw.blurb}</small></div>`; }).join('');
+    const awards = (r.awards || []).filter(a => a.pid === P.pid).map(a => { const aw = DWTD.AWARDS[a.k]; return `<div class="aw">${ART.icon(aw.icon, 'gold')} <b>${aw.title}</b><br><small>${aw.blurb}</small></div>`; }).join('');
     let h = '';
-    if (r.gameover) h = `<h2>🏰 Final loot: ${r.loot}</h2><p>${r.text}</p>${awards ? '<h3>Your Hall of Fame</h3>' + awards : ''}`;
-    else if (r.win) h = `<h2>💰 Banked +${r.lootWon}!</h2><p>${r.text}</p>${awards || '<p class="dim">No award this time. Steady on.</p>'}`;
-    else if (r.culprit === P.pid) h = `<div class="roast">${my.em}🔥</div><h2>It was YOU.</h2><p>${r.text}</p>${awards}`;
-    else h = `<h2>🔥 ${s.dn} woke up</h2><p>${r.text}</p><p class="dim">Not your fault. Probably.</p>${awards}`;
+    if (r.gameover) h = `<h2>${ART.icon('trophy', 'gold')} Final loot: ${r.loot}</h2><p>${r.text}</p>${awards ? '<h3>Your Hall of Fame</h3>' + awards : ''}`;
+    else if (r.win) h = `<h2>${ART.icon('bag', 'gold')} Banked +${r.lootWon}!</h2><p>${r.text}</p>${awards || '<p class="dim">No award this time. Steady on.</p>'}`;
+    else if (r.culprit === P.pid) h = `<div class="roast">${ART.avatar(my.em)}${ART.icon('fire')}</div><h2>It was YOU.</h2><p>${r.text}</p>${awards}`;
+    else h = `<h2>${ART.icon('fire')} ${s.dn} woke up</h2><p>${r.text}</p><p class="dim">Not your fault. Probably.</p>${awards}`;
     $('#resbody').innerHTML = h;
     $('#resnext').textContent = r.gameover ? 'Play again ▶' : (r.last ? 'Final tally ▶' : 'Next heist ▶');
   }

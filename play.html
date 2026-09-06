@@ -20,11 +20,20 @@
   .btn:disabled { opacity:.5; }
   .btn.sec { background:#3b2d5e; color:var(--ink); }
   input { font:inherit; font-size:22px; padding:12px 14px; border-radius:12px; border:2px solid #4b3a7a; background:#100a20; color:var(--ink); width:100%; max-width:420px; text-align:center; }
-  #avatars { display:grid; grid-template-columns:repeat(8,1fr); gap:6px; width:100%; max-width:420px; }
-  #avatars button { font-size:26px; padding:6px 0; border-radius:10px; border:2px solid transparent; background:#2a1f4a; }
+  #avatars { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; width:100%; max-width:420px; }
+  #avatars button { padding:4px; border-radius:12px; border:2px solid transparent; background:#2a1f4a; line-height:0; } #avatars button .av { width:100%; height:auto; }
   #avatars button.sel { border-color:var(--gold); background:#3b2d5e; }
   #tiers { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; width:100%; max-width:420px; }
-  #tiers button { display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 2px; border-radius:12px; border:2px solid transparent; background:#2a1f4a; color:var(--ink); font-size:22px; }
+  #tiers button { display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 2px; border-radius:12px; border:2px solid transparent; background:#2a1f4a; color:var(--ink); font-size:22px; } #tiers button .ic { width:28px; height:28px; color:var(--gold); }
+  .ic { width:1em; height:1em; vertical-align:-0.15em; display:inline-block; } .ic.gold { color:var(--gold); } .ic.dim { color:rgba(255,255,255,.3); }
+  #lobbywho { display:flex; align-items:center; gap:10px; } #lobbywho .av { width:56px; height:56px; }
+  #lkthief .av { width:1.4em; height:1.4em; vertical-align:-0.35em; }
+  #lkitems .ic, #thitems .ic { width:26px; height:26px; margin:0 2px; }
+  .spin { width:44px; height:44px; border-radius:50%; border:5px solid rgba(255,255,255,.15); border-top-color:var(--gold); animation:spin 1s linear infinite; } @keyframes spin { to { transform:rotate(360deg) } }
+  #face { color:var(--good); display:flex; } #face .ic { width:30px; height:30px; } #face[data-s="1"] { color:#ffd75a } #face[data-s="2"] { color:#ffb02e } #face[data-s="3"], #face[data-s="4"] { color:var(--bad); animation:shake .1s infinite }
+  #stillring span .ic { width:90px; height:90px; color:#fff; }
+  #ttdir .ic { width:40px; height:40px; vertical-align:-0.25em; }
+  .roast { display:flex; justify-content:center; align-items:center; gap:0; } .roast .av { width:120px; height:120px; } .roast .ic { width:70px; height:70px; color:#ff6a2a; }
   #tiers button b { font-size:13px; } #tiers button small { font-size:11px; color:var(--dim); }
   #tiers button.sel { border-color:var(--gold); background:#3b2d5e; }
   label { color:var(--dim); font-size:15px; }
@@ -34,9 +43,8 @@
   .topbar { width:100%; display:flex; align-items:center; gap:10px; font-size:18px; }
   .topbar .meter { flex:1; height:12px; background:rgba(255,255,255,.12); border-radius:6px; overflow:hidden; }
   .topbar .meter i { display:block; height:100%; width:0; background:linear-gradient(90deg,#7dffa0,#ffd75a 45%,#ff5f5f 80%); transition:width .15s linear; }
-  #face { font-size:30px; }
   /* lookout */
-  #stillring { width:min(70vw,300px); height:min(70vw,300px); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:90px; position:relative;
+  #stillring { width:min(70vw,300px); height:min(70vw,300px); border-radius:50%; display:flex; align-items:center; justify-content:center; position:relative;
     background:conic-gradient(from -90deg, var(--good) 0 calc((1 - var(--n)) * 100%), var(--bad) calc((1 - var(--n)) * 100%) 100%);
     box-shadow:0 0 0 12px rgba(255,255,255,.06); transition:box-shadow .2s; }
   #stillring::after { content:""; position:absolute; inset:16px; border-radius:50%; background:var(--bg); }
@@ -64,7 +72,6 @@
   #calibbar { width:100%; max-width:420px; height:16px; background:rgba(255,255,255,.12); border-radius:8px; overflow:hidden; } #calibfill { display:block; height:100%; width:0; background:var(--good); }
   #cd { font-size:140px; font-weight:700; }
   .aw { background:rgba(255,255,255,.08); border-radius:14px; padding:10px 14px; font-size:20px; margin:6px 0; } .aw small { color:var(--dim); }
-  .roast { font-size:80px; }
   .hint { font-size:15px; color:var(--dim); max-width:420px; }
 </style>
 </head>
@@ -73,7 +80,7 @@
 <div id="flash" hidden></div>
 
 <section data-screen="join" style="justify-content:flex-start;overflow-y:auto">
-  <h1>🐉 Don't Wake the Dragon</h1>
+  <h1>Don't Wake the Dragon</h1>
   <div id="roomwrap" hidden><label>Room code (on the TV)</label><input id="roomcode" placeholder="ABCD" autocomplete="off" autocapitalize="characters"></div>
   <label>Your name</label><input id="name" placeholder="Sneaky name" maxlength="14" autocomplete="off">
   <label>Pick a face</label><div id="avatars"></div>
@@ -82,19 +89,19 @@
   <p class="hint">Tap <b>Allow</b> when your phone asks about motion. You'll hold this phone very, very still.</p>
 </section>
 
-<section data-screen="wait" hidden><h2>🔗</h2><p id="waitmsg">Connecting…</p></section>
+<section data-screen="wait" hidden><div class="spin"></div><p id="waitmsg">Connecting…</p></section>
 
 <section data-screen="lobby">
   <h2 id="lobbywho"></h2>
-  <p class="big">You're in! 👀 Look at the TV.</p>
+  <p class="big">You're in. Look at the TV.</p>
   <p class="dim">Tonight's dragon is <b id="lobbydragon"></b>. It has a headache. Be nice.</p>
   <p id="lobbysens" class="hint"></p>
   <p id="lobbycount" class="dim"></p>
-  <button class="btn capbtn" hidden>⭐ Everyone's in — start!</button>
+  <button class="btn capbtn" hidden>Everyone's in. Start!</button>
 </section>
 
 <section data-screen="calib">
-  <h2>🤫 Hold still…</h2>
+  <h2>Hold still…</h2>
   <p id="calibrole" class="big"></p>
   <div id="calibbar"><i id="calibfill"></i></div>
   <p id="calibmsg">Measuring your wobble.</p>
@@ -104,9 +111,9 @@
 <section data-screen="countdown"><div id="cd">3</div><p class="big">Get ready to be a statue</p></section>
 
 <section data-screen="lookout" id="lookout">
-  <div class="topbar"><span id="face">😴</span><div class="meter"><i id="meterfill"></i></div><span id="stagename" class="dim">zzz</span></div>
+  <div class="topbar"><span id="face" data-s="0"><svg class="ic" viewBox="0 0 24 24"><path d="M3 13c2-5 6-7 10-7 3 0 5 1 7 3l1 3-3 1-2-2c-1 2-1 4 0 6l-2 1c-2-2-3-4-3-6-2 1-4 3-5 6l-3-1c0-2 0-3 0-4Z" fill="currentColor"/></svg></span><div class="meter"><i id="meterfill"></i></div><span id="stagename" class="dim">zzz</span></div>
   <p id="lkthief" class="dim"></p>
-  <div id="stillring"><span>👀</span></div>
+  <div id="stillring"><span><svg class="ic" viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg></span></div>
   <div id="egg" hidden>keep a thumb here</div>
   <div id="stillline">Statue mode.</div>
   <p id="lkitems"></p>
@@ -114,15 +121,15 @@
 </section>
 
 <section data-screen="thief" id="thief">
-  <div class="topbar"><span id="thnap">🌙</span><span id="taskname" style="flex:1">…</span><span id="thitems"></span></div>
+  <div class="topbar"><span id="thnap"></span><span id="taskname" style="flex:1">…</span><span id="thitems"></span></div>
   <div id="taskprogwrap"><i id="taskprog"></i></div>
   <div id="taskwrap"></div>
 </section>
 
 <section data-screen="tiptoe">
-  <h2>🩰 Tiptoe out</h2>
+  <h2>Tiptoe out</h2>
   <p id="ttstep" class="dim"></p>
-  <div id="ttdir">⬅️</div>
+  <div id="ttdir"></div>
   <div id="level"><div id="tttarget"></div><div id="bubble"></div></div>
   <input type="range" id="ttslider" min="-60" max="60" value="0" hidden>
   <p id="ttmsg" class="big"></p>
@@ -133,11 +140,12 @@
 
 <section data-screen="result">
   <div id="resbody"></div>
-  <button class="btn capbtn" id="resnext" hidden>Next heist ▶</button>
+  <button class="btn capbtn" id="resnext" hidden>Next heist</button>
   <p class="hint">Look at the TV for everyone's awards.</p>
 </section>
 
 <script src="vendor/mqtt.min.js"></script>
+<script src="js/art.js"></script>
 <script src="js/shared.js"></script>
 <script src="js/tasks.js"></script>
 <script src="js/play.js"></script>

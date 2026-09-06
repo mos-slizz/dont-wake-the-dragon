@@ -6,14 +6,14 @@
 
   // ---- tuning (playtest knobs) ----
   const TUNE = {
-    rise: 50,          // meter points per second at combined noise 1.0
-    quiet: 0.05,       // combined noise below this = "quiet", meter decays
-    blameLoud: 0.55,   // a single phone above this gets shouted at
+    rise: 45,          // meter points per second at combined noise 1.0
+    quiet: 0.03,       // combined noise below this = "quiet", meter decays
+    blameLoud: 0.35,   // a single phone above this gets shouted at
     blameCooldown: 3500,
     talkEvery: [9000, 15000],
     tiptoeTol: 13,     // degrees
     tiptoeHold: 1300,  // ms everyone must hold the angle
-    tiptoeSens: 0.55,  // wobble counts less while tiptoeing (you're supposed to move a bit)
+    tiptoeSens: 0.35,  // wobble counts less while tiptoeing (you're supposed to move a bit)
     stale: 1200,       // ms before a phone's last sample is considered gone
   };
   const $ = (s) => document.querySelector(s);
@@ -24,28 +24,38 @@
     heistIdx: 0, heist: null, thiefId: null, task: null,
     meter: 0, stage: 0, eyeHoldUntil: 0, loud: null, lastBlame: 0, lastTalk: 0, nextTalkIn: 10000,
     got: 0, napEnd: 0, loot: 0, lootThisHeist: 0, awake: false,
-    tiptoe: null, result: null, stats: {}, gameStats: {}, sensPreset: 'normal', lastPub: 0, lastSnap: 0,
+    tiptoe: null, result: null, stats: {}, gameStats: {}, hearing: +(localStorage.getItem('dwtd_hearing') || 1), lastPub: 0, lastSnap: 0,
     calibDeadline: 0, countdownEnd: 0, speech: null, toastT: 0, drops: 0, stageHoldMs: 0, thiefCursor: -1,
   };
 
   // ---------- boot ----------
   window.addEventListener('DOMContentLoaded', () => {
     ['lobby', 'stagewrap', 'qr', 'code', 'url', 'players', 'start', 'status', 'hud', 'meterfill', 'meterlabel', 'title', 'flavor', 'loot', 'nap', 'napfill',
-      'row', 'toast', 'speech', 'overlay', 'lootbar', 'sens', 'mute', 'tts', 'scene', 'fx', 'stagelist', 'tvbtn', 'version'].forEach(id => el[id] = document.getElementById(id));
+      'row', 'toast', 'speech', 'overlay', 'lootbar', 'sens', 'mute', 'tts', 'scene', 'fx', 'stagelist', 'tvbtn', 'version', 'hearing', 'hearingtag'].forEach(id => el[id] = document.getElementById(id));
     DV.init(el.scene, el.fx);
     el.version.textContent = 'v' + DWTD.VERSION;
     fitStage(); window.addEventListener('resize', fitStage);
     requestAnimationFrame(loop);
-    el.sens.addEventListener('change', () => { G.sensPreset = el.sens.value; });
-    el.mute.addEventListener('click', () => { const m = el.mute.dataset.on !== '1'; el.mute.dataset.on = m ? '1' : '0'; el.mute.textContent = m ? '🔇 Muted' : '🔊 Sound'; A.setMuted(m); });
-    el.tts.addEventListener('click', () => { const on = el.tts.dataset.on !== '1'; el.tts.dataset.on = on ? '1' : '0'; el.tts.textContent = on ? '🗣️ Sleep-talk on' : '🤐 Sleep-talk off'; A.setTTS(on); });
+    el.sens.innerHTML = DWTD.HEARING.map(([l, v]) => `<option value="${v}">${l}</option>`).join('');
+    el.sens.addEventListener('change', () => setHearing(+el.sens.value));
+    setHearing(G.hearing);
+    el.mute.addEventListener('click', () => { const m = el.mute.dataset.on !== '1'; el.mute.dataset.on = m ? '1' : '0'; el.mute.innerHTML = ART.icon(m ? 'mute' : 'volume') + (m ? ' Muted' : ' Sound'); A.setMuted(m); });
+    el.tts.addEventListener('click', () => { const on = el.tts.dataset.on !== '1'; el.tts.dataset.on = on ? '1' : '0'; el.tts.innerHTML = ART.icon('speech') + (on ? ' Sleep-talk on' : ' Sleep-talk off'); A.setTTS(on); });
     el.start.addEventListener('click', () => { A.unlock(); A.start(); startHeist(); });
     el.tvbtn.addEventListener('click', () => onNextButton());
-    document.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { A.unlock(); onNextButton(); } if (e.key === 'd') debugNoise(); });
+    document.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { A.unlock(); onNextButton(); } if (e.key === 'd') debugNoise(); if (e.key === ']' || e.key === '+' || e.key === '=') setHearing(G.hearing + 0.2); if (e.key === '[' || e.key === '-') setHearing(G.hearing - 0.2); });
     createRoom();
   });
 
   let lastFit = '';
+  function setHearing(v) {
+    G.hearing = Math.round(clamp(v, 0.4, 3) * 10) / 10; localStorage.setItem('dwtd_hearing', G.hearing);
+    const near = [...DWTD.HEARING].sort((a, b) => Math.abs(a[1] - G.hearing) - Math.abs(b[1] - G.hearing))[0];
+    if (Math.abs(near[1] - G.hearing) < 0.01) el.sens.value = String(near[1]);
+    el.hearing.textContent = `Dragon hearing is ×${G.hearing.toFixed(1)}. Press [ or ] on the keyboard any time to adjust.`;
+    el.hearingtag.textContent = `hearing ×${G.hearing.toFixed(1)}`;
+    if (G.phase !== 'lobby' && G.phase !== 'boot') toast(`Dragon hearing ×${G.hearing.toFixed(1)}`, 1200);
+  }
   function fitStage() { const key = innerWidth + 'x' + innerHeight; if (key === lastFit) return; lastFit = key; const s = Math.min(innerWidth / 1600, innerHeight / 900); el.stagewrap.style.transform = `translate(-50%,-50%) scale(${s})`; }
 
   async function createRoom() {
@@ -72,7 +82,7 @@
     const now = Date.now();
     if (m.t === 'join') {
       let p = G.players.get(pid);
-      if (!p) { p = { id: pid, name: '', em: '🦊', tier: 'squire', sens: 'motion', on: true, last: now, ok: false, n: 0, nAt: 0, tilt: 0, tiltAt: 0, role: 'lookout' }; G.players.set(pid, p); G.order.push(pid); }
+      if (!p) { p = { id: pid, name: '', em: 'fox', tier: 'squire', sens: 'motion', on: true, last: now, ok: false, n: 0, nAt: 0, tilt: 0, tiltAt: 0, role: 'lookout' }; G.players.set(pid, p); G.order.push(pid); }
       p.name = String(m.name || 'Someone').slice(0, 14); p.em = m.em || p.em; p.tier = m.tier || p.tier; p.sens = m.sens || p.sens; p.on = true; p.last = now;
       if (!G.stats[pid]) G.stats[pid] = freshStats();
       if (!G.gameStats[pid]) G.gameStats[pid] = freshStats();
@@ -171,7 +181,7 @@
     for (const p of G.players.values()) p.n = 0;
     setPhase('tiptoe');
     A.whoosh(); A.say('mmm... footsteps...', { rate: 0.6 });
-    toast('TIPTOE OUT! Everyone lean together… slowly.', 2500);
+    toast('TIPTOE OUT! Everyone lean together… slowly.', 2500, null, 'shoe');
   }
 
   function failHeist(cause, culpritId) {
@@ -224,9 +234,9 @@
   // ---------- thief task messages ----------
   function onTaskMsg(p, m) {
     if (p.id !== G.thiefId || G.phase !== 'heist') return;
-    if (m.ev === 'drop') { G.meter = clamp(G.meter + 22, 0, 100); G.drops++; G.stats[p.id].drops++; A.clang(); toast('CLANG!! 🫠', 1200); DV.set({ twitch: 1 }); event('clang'); G.lastThiefNoise = Date.now(); }
+    if (m.ev === 'drop') { G.meter = clamp(G.meter + 22, 0, 100); G.drops++; G.stats[p.id].drops++; A.clang(); toast('CLANG!!', 1200); DV.set({ twitch: 1 }); event('clang'); G.lastThiefNoise = Date.now(); }
     else if (m.ev === 'slip') { G.meter = clamp(G.meter + 12, 0, 100); G.drops++; G.stats[p.id].drops++; A.clink(); toast('clink…', 900); DV.set({ twitch: 0.5 }); G.lastThiefNoise = Date.now(); }
-    else if (m.ev === 'item') { G.got++; G.stats[p.id].items++; A.item(); DV.coins(8); DV.set({ lootLeft: 1 - G.got / G.heist.items }); toast(pick(['Got one! 💰', 'Sneaky! 💎', 'Ooh, shiny. 🪙', 'Pocketed. 🤫']), 1000); event('item'); if (G.got >= G.heist.items) setTimeout(beginTiptoe, 700); }
+    else if (m.ev === 'item') { G.got++; G.stats[p.id].items++; A.item(); DV.coins(8); DV.set({ lootLeft: 1 - G.got / G.heist.items }); toast(pick(['Got one!', 'Sneaky!', 'Ooh, shiny.', 'Pocketed.']), 1000, null, 'bag'); event('item'); if (G.got >= G.heist.items) setTimeout(beginTiptoe, 700); }
     if (m.prog != null) G.taskProg = +m.prog;
   }
 
@@ -265,7 +275,7 @@
     if (G.awake) return;
     const eyeOpen = G.stage === 3;
     let maxN = 0, sum = 0, loudId = null;
-    const preset = DWTD.SENSITIVITY[G.sensPreset] * G.heist.sens * (G.phase === 'tiptoe' ? TUNE.tiptoeSens : 1);
+    const preset = G.hearing * G.heist.sens * (G.phase === 'tiptoe' ? TUNE.tiptoeSens : 1);
     for (const p of G.players.values()) {
       if (!p.on) continue;
       if (G.phase === 'heist' && p.role === 'thief') continue; // thief's phone is supposed to move
@@ -294,11 +304,11 @@
     if (s > was) {
       if (s === 1) { DV.set({ twitch: 1 }); A.snort(); }
       if (s === 2) { A.snort(); }
-      if (s === 3) { G.eyeHoldUntil = t + DWTD.EYE_HOLD_MS; A.hush(); A.say(pick(DWTD.SLEEP_TALK.eye), { rate: 0.55, pitch: 0.35 }); toast('👁️ NOBODY MOVE', 2200); event('eye'); }
+      if (s === 3) { G.eyeHoldUntil = t + DWTD.EYE_HOLD_MS; A.hush(); A.say(pick(DWTD.SLEEP_TALK.eye), { rate: 0.55, pitch: 0.35 }); toast('NOBODY MOVE', 2200, null, 'eye'); event('eye'); }
       if (s === 4) failHeist(G.lastThiefNoise && t - G.lastThiefNoise < 1600 ? 'thief' : 'wobble', G.lastThiefNoise && t - G.lastThiefNoise < 1600 ? G.thiefId : (G.loud || G.lastBlamed || null));
       if (s >= 1 && s < 4 && G.loud) blame(G.loud, true);
     } else {
-      if (was === 3) { A.sigh(); toast('…phew. 😮‍💨', 1500); event('phew'); DV.burst('heart', 3, 560, 420); }
+      if (was === 3) { A.sigh(); toast('…phew.', 1500); event('phew'); DV.burst('heart', 3, 560, 420); }
     }
     event('stage', { s });
   }
@@ -334,14 +344,14 @@
 
   // ---------- rendering (DOM) ----------
   function renderLobby() {
-    el.players.innerHTML = G.order.map(id => { const p = G.players.get(id); return `<div class="pl ${p.on ? '' : 'off'}"><span class="em">${p.em}</span><span class="nm">${esc(p.name)}</span><span class="tier">${tierEm(p.tier)}${p.sens === 'touch' ? ' 👆' : ''}${id === captainId() ? ' ⭐' : ''}</span></div>`; }).join('') || '<div class="hint">Nobody yet. Scan the code!</div>';
+    el.players.innerHTML = G.order.map(id => { const p = G.players.get(id); return `<div class="pl ${p.on ? '' : 'off'}">${ART.avatar(p.em)}<span class="nm">${esc(p.name)}</span><span class="tier">${ART.icon(tierIcon(p.tier))}${p.sens === 'touch' ? ART.icon('hand') : ''}${id === captainId() ? ART.icon('star', 'gold') : ''}</span></div>`; }).join('') || '<div class="hint">Nobody yet. Scan the code!</div>';
     el.start.disabled = !G.order.some(id => G.players.get(id).on);
     el.start.textContent = G.order.length ? `Start the heist (${G.order.filter(id => G.players.get(id).on).length} sneaks)` : 'Waiting for sneaks…';
   }
-  function tierEm(t) { return (DWTD.TIERS.find(x => x.key === t) || {}).em || ''; }
+  function tierIcon(t) { return (DWTD.TIERS.find(x => x.key === t) || {}).icon || 'shield'; }
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   function renderRow() {
-    el.row.innerHTML = G.order.map(id => { const p = G.players.get(id); return `<div class="pv ${p.on ? '' : 'off'}" data-id="${id}"><div class="av">${p.em}<span class="role">${p.role === 'thief' ? '🥷' : '👀'}</span></div><div class="nm">${esc(p.name)}</div><div class="wob"><i></i></div></div>`; }).join('');
+    el.row.innerHTML = G.order.map(id => { const p = G.players.get(id); return `<div class="pv ${p.on ? '' : 'off'}" data-id="${id}"><div class="avwrap">${ART.avatar(p.em)}<span class="role ${p.role === 'thief' ? 'mask' : 'eye'}" data-k="${p.role === 'thief' ? 'mask' : 'eye'}">${ART.icon(p.role === 'thief' ? 'mask' : 'eye')}</span></div><div class="nm">${esc(p.name)}</div><div class="wob"><i></i></div></div>`; }).join('');
   }
   function avatarPos(id) {
     const d = el.row.querySelector(`.pv[data-id="${id}"]`); if (!d) return null;
@@ -355,12 +365,12 @@
     el.meterlabel.textContent = STAGES[G.stage].label;
     el.meterlabel.dataset.s = G.stage;
     [...el.stagelist.children].forEach((li, i) => li.classList.toggle('on', i === G.stage));
-    el.loot.textContent = `🏦 ${G.loot}`;
+    el.loot.innerHTML = `${ART.icon('coin', 'gold')} ${G.loot} banked`;
     if (G.heist) {
       const frac = clamp((G.napEnd - t) / (G.heist.napSec * 1000), 0, 1);
       el.napfill.style.width = (G.phase === 'heist' ? frac * 100 : 100) + '%';
       el.nap.dataset.low = frac < 0.25 ? '1' : '0';
-      el.lootbar.innerHTML = Array.from({ length: G.heist.items }, (_, i) => `<span class="${i < G.got ? 'got' : ''}">${i < G.got ? '💰' : '⬜'}</span>`).join('') + ` <b>+${G.heist.loot}</b>`;
+      const lb = Array.from({ length: G.heist.items }, (_, i) => ART.icon(i < G.got ? 'bag' : 'slot', i < G.got ? 'gold' : 'dim')).join('') + ` <b>+${G.heist.loot}</b>`; if (el.lootbar.dataset.k !== lb) { el.lootbar.dataset.k = lb; el.lootbar.innerHTML = lb; }
     }
     for (const d of el.row.children) {
       const p = G.players.get(d.dataset.id); if (!p) continue;
@@ -368,22 +378,22 @@
       const bar = d.querySelector('.wob i'); bar.style.width = clamp(n * 100, 0, 100) + '%'; bar.style.background = n < 0.2 ? '#7dffa0' : n < 0.5 ? '#ffd75a' : '#ff5f5f';
       d.classList.toggle('loud', G.loud === p.id && p.role === 'lookout');
       d.classList.toggle('off', !p.on);
-      d.querySelector('.role').textContent = p.role === 'thief' ? '🥷' : (G.phase === 'tiptoe' && G.tiptoe && G.tiptoe.okIds.includes(p.id) ? '✅' : '👀');
+      const roleEl = d.querySelector('.role'); const want = p.role === 'thief' ? 'mask' : (G.phase === 'tiptoe' && G.tiptoe && G.tiptoe.okIds.includes(p.id) ? 'check' : 'eye'); if (roleEl.dataset.k !== want) { roleEl.dataset.k = want; roleEl.className = 'role ' + want; roleEl.innerHTML = ART.icon(want); }
     }
     if (G.toastT && t > G.toastT) { el.toast.hidden = true; G.toastT = 0; }
     if (G.speechT && t > G.speechT) { el.speech.hidden = true; G.speechT = 0; }
     if (G.phase === 'tiptoe' && G.tiptoe) { const h = $('#tthold'); if (h) h.style.width = (G.tiptoe.holdStart ? clamp((t - G.tiptoe.holdStart) / TUNE.tiptoeHold, 0, 1) * 100 : 0) + '%'; const c = $('#ttcount'); if (c) c.textContent = `${G.tiptoe.okIds.length} / ${onlinePlayers().length} in position`; }
-    if (G.phase === 'calib') { const c = $('#calibcount'); if (c) c.textContent = onlinePlayers().map(p => `${p.em} ${p.ok ? '✅' : '…'}`).join('   '); }
+    if (G.phase === 'calib') { const c = $('#calibcount'); const h = onlinePlayers().map(p => `<span class="cp ${p.ok ? 'ok' : ''}">${ART.avatar(p.em)}${p.ok ? ART.icon('check') : ''}</span>`).join(''); if (c && c.dataset.k !== h) { c.dataset.k = h; c.innerHTML = h; } }
   }
-  function toast(text, ms, em) { el.toast.innerHTML = (em ? `<span class="tem">${em}</span>` : '') + esc(text); el.toast.hidden = false; el.toast.classList.remove('pop'); void el.toast.offsetWidth; el.toast.classList.add('pop'); G.toastT = Date.now() + ms; }
+  function toast(text, ms, em, icon) { el.toast.innerHTML = (em ? `<span class="tem">${ART.avatar(em)}</span>` : '') + (icon ? ART.icon(icon, 'big') + ' ' : '') + esc(text); el.toast.hidden = false; el.toast.classList.remove('pop'); void el.toast.offsetWidth; el.toast.classList.add('pop'); G.toastT = Date.now() + ms; }
   function speech(text, ms) { el.speech.textContent = text; el.speech.hidden = false; G.speechT = Date.now() + ms; }
-  function playerName(id) { const p = G.players.get(id); return p ? `${p.em} ${esc(p.name)}` : '?'; }
+  function playerName(id) { const p = G.players.get(id); return p ? `<span class="pn">${ART.avatar(p.em)} ${esc(p.name)}</span>` : '?'; }
 
   function renderOverlay() {
     const o = el.overlay; o.hidden = false; o.className = 'ov ' + G.phase;
     const thief = G.players.get(G.thiefId);
     if (G.phase === 'calib') {
-      o.innerHTML = `<div class="card"><h2>Everyone hold still…</h2><p class="big">📱 Hold your phone like it's a sleeping baby.</p><p>${G.dragon} is listening.</p><div id="calibcount" class="calib"></div><p class="small">Thief this heist: <b>${thief ? playerName(thief.id) : ''}</b> 🥷</p></div>`;
+      o.innerHTML = `<div class="card"><h2>Everyone hold still…</h2><p class="big">${ART.icon('phone', 'big')} Hold your phone like it's a sleeping baby.</p><p>${G.dragon} is listening.</p><div id="calibcount" class="calib"></div><p class="small">Thief this heist: <b>${thief ? playerName(thief.id) : ''}</b> ${ART.icon('mask')}</p></div>`;
     } else if (G.phase === 'countdown') {
       const n = Math.max(0, Math.ceil((G.countdownEnd - Date.now()) / 1000));
       o.innerHTML = `<div class="cd">${n > 0 ? n : 'shh'}</div>`;
@@ -391,17 +401,17 @@
       o.hidden = true;
     } else if (G.phase === 'tiptoe') {
       const tt = G.tiptoe; const a = tt.steps[tt.step];
-      o.innerHTML = `<div class="tt"><h2>🩰 TIPTOE OUT</h2><div class="dir">${a === 0 ? '📱 Hold it FLAT' : a < 0 ? '⬅️ Lean LEFT ' + (-a) + '°' : '➡️ Lean RIGHT ' + a + '°'}</div><p>Everybody together. Slowly. Step ${tt.step + 1} of ${tt.steps.length}</p><div class="hold"><i id="tthold"></i></div><div id="ttcount"></div></div>`;
+      o.innerHTML = `<div class="tt"><h2>${ART.icon('shoe')} TIPTOE OUT</h2><div class="dir">${a === 0 ? ART.icon('flat', 'big') + ' Hold it FLAT' : a < 0 ? ART.icon('left', 'big') + ' Lean LEFT ' + (-a) + '°' : ART.icon('right', 'big') + ' Lean RIGHT ' + a + '°'}</div><p>Everybody together. Slowly. Step ${tt.step + 1} of ${tt.steps.length}</p><div class="hold"><i id="tthold"></i></div><div id="ttcount"></div></div>`;
     } else if (G.phase === 'result' || G.phase === 'gameover') {
       const r = G.result; if (!r) { o.hidden = true; return; }
-      const awards = (r.awards || []).map(a => { const aw = DWTD.AWARDS[a.k]; return `<div class="aw"><span class="aem">${aw.em}</span><div><b>${aw.title}</b> — ${playerName(a.pid)}<br><small>${aw.blurb}</small></div></div>`; }).join('');
+      const awards = (r.awards || []).map(a => { const aw = DWTD.AWARDS[a.k]; return `<div class="aw"><span class="aem">${ART.icon(aw.icon)}</span><div><b>${aw.title}</b> — ${playerName(a.pid)}<br><small>${aw.blurb}</small></div></div>`; }).join('');
       if (G.phase === 'gameover') {
-        o.innerHTML = `<div class="card res win"><h1>🏰 The Great Dragon Heist</h1><p class="big">Family loot: <b>${r.loot}</b> 🪙</p><p>${esc(r.text)}</p><div class="awards"><h3>Hall of Fame</h3>${awards || '<p>Nobody did anything notable. Suspicious.</p>'}</div><p class="small">Press Next on the TV or the captain's phone to play again.</p></div>`;
+        o.innerHTML = `<div class="card res win"><h1>${ART.icon('trophy', 'gold big')} The Great Dragon Heist</h1><p class="big">Family loot: <b>${r.loot}</b> ${ART.icon('coin', 'gold')}</p><p>${esc(r.text)}</p><div class="awards"><h3>Hall of Fame</h3>${awards || '<p>Nobody did anything notable. Suspicious.</p>'}</div><p class="small">Press Next on the TV or the captain's phone to play again.</p></div>`;
       } else if (r.win) {
-        o.innerHTML = `<div class="card res win"><h1>💰 LOOT BANKED!</h1><p class="big">+${r.lootWon} 🪙 &nbsp; (family total ${r.loot})</p><p>${esc(r.text)}</p><div class="awards">${awards}</div><p class="small">${r.last ? 'That was the last heist! Press Next for the final tally.' : 'Next heist: press Next on the TV or the ⭐ captain\'s phone.'}</p></div>`;
+        o.innerHTML = `<div class="card res win"><h1>${ART.icon('bag', 'gold big')} LOOT BANKED!</h1><p class="big">+${r.lootWon} ${ART.icon('coin', 'gold')} &nbsp; (family total ${r.loot})</p><p>${esc(r.text)}</p><div class="awards">${awards}</div><p class="small">${r.last ? 'That was the last heist! Press Next for the final tally.' : 'Next heist: press Next on the TV or the captain\'s phone.'}</p></div>`;
       } else {
         const c = r.culprit ? G.players.get(r.culprit) : null;
-        o.innerHTML = `<div class="card res lose"><h1>🔥 ${G.dragon.toUpperCase()} IS AWAKE</h1>${c ? `<div class="roast">${c.em}<span>🔥</span></div>` : '<div class="roast">🌅</div>'}<p class="big">${esc(r.text)}</p><p>Lost this heist's loot (${r.lootLost}). Banked loot is safe: ${r.loot} 🪙</p><div class="awards">${awards}</div><p class="small">${r.last ? 'That was the last heist! Press Next for the final tally.' : 'Try again? Press Next on the TV or the ⭐ captain\'s phone.'}</p></div>`;
+        o.innerHTML = `<div class="card res lose"><h1>${ART.icon('fire', 'big')} ${G.dragon.toUpperCase()} IS AWAKE</h1>${c ? `<div class="roast">${ART.avatar(c.em)}<span>${ART.icon('fire')}</span></div>` : `<div class="roast">${ART.icon('sun', 'gold')}</div>`}<p class="big">${esc(r.text)}</p><p>Lost this heist's loot (${r.lootLost}). Banked loot is safe: ${r.loot} ${ART.icon('coin', 'gold')}</p><div class="awards">${awards}</div><p class="small">${r.last ? 'That was the last heist! Press Next for the final tally.' : 'Try again? Press Next on the TV or the captain\'s phone.'}</p></div>`;
       }
     } else o.hidden = true;
   }

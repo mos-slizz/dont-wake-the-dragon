@@ -33,12 +33,12 @@
   #players { display:flex; flex-wrap:wrap; gap:10px; min-height:120px; margin-bottom:16px; }
   .pl { background:rgba(255,255,255,.08); border-radius:14px; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:24px; }
   .pl.off { opacity:.35; }
-  .pl .em { font-size:34px; } .pl .tier { font-size:18px; color:var(--dim); }
+  .pl .av { width:44px; height:44px; } .pl .tier { display:flex; gap:6px; color:var(--dim); } .pl .tier .ic { width:22px; height:22px; }
   .hint { color:var(--dim); font-size:22px; }
   #start { width:100%; font:inherit; font-size:30px; font-weight:700; padding:16px; border:0; border-radius:16px; background:var(--gold); color:#2b1d00; cursor:pointer; }
   #start:disabled { opacity:.5; cursor:default; }
   .opts { display:flex; gap:10px; margin-top:14px; align-items:center; font-size:18px; color:var(--dim); flex-wrap:wrap; }
-  .opts select, .opts button { font:inherit; font-size:18px; padding:8px 12px; border-radius:10px; border:1px solid #5a4a8a; background:#221641; color:var(--ink); cursor:pointer; }
+  .opts select, .opts button { font:inherit; font-size:18px; padding:8px 12px; border-radius:10px; border:1px solid #5a4a8a; background:#221641; color:var(--ink); cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
   .howto { margin-top:14px; font-size:17px; color:var(--dim); line-height:1.35; }
 
   /* HUD */
@@ -47,12 +47,12 @@
   #title { font-size:40px; font-weight:700; text-shadow:0 3px 0 rgba(0,0,0,.5); }
   #flavor { font-size:20px; color:var(--dim); }
   #loot { font-size:36px; font-weight:700; color:var(--gold); text-align:right; }
-  #lootbar { font-size:30px; text-align:right; letter-spacing:4px; } #lootbar b { font-size:22px; color:var(--gold); }
+  #lootbar { font-size:30px; text-align:right; display:flex; gap:6px; justify-content:flex-end; align-items:center; } #lootbar b { font-size:22px; color:var(--gold); }
   #nap { position:absolute; left:40px; right:40px; top:118px; height:16px; border-radius:8px; background:rgba(255,255,255,.12); overflow:hidden; }
   #napfill { height:100%; background:linear-gradient(90deg,#5a7bff,#c9d7ff); border-radius:8px; transition:width .2s linear; }
   #nap[data-low="1"] #napfill { background:linear-gradient(90deg,#ff8a3d,#ffd36b); }
-  #nap::after { content:"🌙"; position:absolute; right:6px; top:-8px; font-size:24px; }
-  #nap[data-low="1"]::after { content:"🌅"; }
+  .napic { position:absolute; right:-6px; top:-12px; color:#c9d7ff; } .napic .ic { width:36px; height:36px; }
+  .napic.sun { display:none; color:#ffd36b; } #nap[data-low="1"] .napic.sun { display:block; } #nap[data-low="1"] .napic.moon { display:none; }
   #meter { position:absolute; left:26px; top:150px; bottom:170px; width:78px; }
   #meterbar { position:absolute; left:0; right:0; top:40px; bottom:0; background:rgba(255,255,255,.1); border-radius:40px; overflow:hidden; border:3px solid rgba(255,255,255,.15); }
   #meterfill { position:absolute; left:0; right:0; bottom:0; height:0%; background:linear-gradient(0deg,#7dffa0,#ffd75a 45%,#ff5f5f 80%,#ff2d2d); transition:height .12s linear; }
@@ -60,20 +60,27 @@
   #meterlabel[data-s="3"], #meterlabel[data-s="4"] { color:var(--bad); animation:pulse .5s infinite alternate; }
   @keyframes pulse { to { transform:scale(1.15); } }
   #stagelist { position:absolute; left:92px; top:40px; bottom:0; margin:0; padding:0; list-style:none; display:flex; flex-direction:column-reverse; justify-content:space-between; font-size:18px; color:var(--dim); }
-  #stagelist li.on { color:#fff; font-weight:700; }
+  #stagelist li { padding-left:16px; position:relative; } #stagelist li::before { content:""; position:absolute; left:0; top:9px; width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.25); }
+  #stagelist li.on { color:#fff; font-weight:700; } #stagelist li.on::before { background:#fff; box-shadow:0 0 8px #fff; }
   #row { position:absolute; left:0; right:0; bottom:26px; display:flex; justify-content:center; gap:26px; }
   .pv { width:140px; text-align:center; transition:transform .1s; }
-  .pv .av { font-size:64px; line-height:1; position:relative; filter:drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
-  .pv .role { position:absolute; right:14px; bottom:-6px; font-size:26px; }
+  .pv .avwrap { position:relative; width:92px; height:92px; margin:0 auto; filter:drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
+  .pv .avwrap .av { width:92px; height:92px; }
+  .pv .role { position:absolute; right:-6px; bottom:-4px; width:36px; height:36px; border-radius:50%; background:#2a1f4a; border:3px solid #0d0a18; display:flex; align-items:center; justify-content:center; color:#fff; }
+  .pv .role .ic { width:22px; height:22px; } .pv .role.mask { background:#ffb02e; color:#2b1d00; } .pv .role.check { background:#7dffa0; color:#0b3a1c; }
   .pv .nm { font-size:22px; margin-top:6px; }
   .pv .wob { height:10px; background:rgba(255,255,255,.12); border-radius:5px; margin:6px 20px 0; overflow:hidden; }
   .pv .wob i { display:block; height:100%; width:0; background:var(--good); }
   .pv.loud { animation:shake .12s infinite; }
-  .pv.loud .av::before { content:"❗"; position:absolute; left:8px; top:-18px; font-size:30px; }
+  .pv.loud .avwrap::before { content:"!"; position:absolute; left:-8px; top:-22px; font-size:38px; font-weight:700; color:var(--bad); text-shadow:0 2px 0 #000; z-index:1; }
   .pv.off { opacity:.3; }
   @keyframes shake { 0%{transform:translate(-4px,0) rotate(-3deg)} 50%{transform:translate(4px,2px) rotate(3deg)} 100%{transform:translate(-3px,-2px) rotate(-2deg)} }
   #toast { position:absolute; left:50%; top:200px; transform:translateX(-50%); background:var(--panel); padding:16px 34px; border-radius:22px; font-size:44px; font-weight:700; white-space:nowrap; border:3px solid rgba(255,255,255,.2); }
-  #toast .tem { font-size:56px; margin-right:12px; vertical-align:middle; }
+  #toast .tem .av { width:64px; height:64px; margin-right:12px; vertical-align:middle; }
+  .ic { width:1em; height:1em; vertical-align:-0.15em; display:inline-block; } .ic.big { width:1.2em; height:1.2em; } .ic.gold { color:var(--gold); } .ic.dim { color:rgba(255,255,255,.3); }
+  .pn .av { width:1.3em; height:1.3em; vertical-align:-0.3em; }
+  #hearingtag { font-size:18px; color:var(--dim); margin-top:2px; }
+  .calib .cp { display:inline-flex; align-items:center; margin:0 10px; opacity:.5; } .calib .cp.ok { opacity:1; } .calib .cp .av { width:60px; height:60px; } .calib .cp .ic { width:30px; height:30px; color:var(--good); margin-left:4px; }
   #toast.pop { animation:pop .25s ease-out; }
   @keyframes pop { from { transform:translateX(-50%) scale(.6); opacity:0 } to { transform:translateX(-50%) scale(1); opacity:1 } }
   #speech { position:absolute; left:380px; top:250px; max-width:520px; background:#fff; color:#2a1d4a; padding:16px 22px; border-radius:26px; font-size:28px; font-style:italic; }
@@ -91,11 +98,12 @@
   .tt h2 { margin:0; font-size:40px; } .tt .dir { font-size:72px; font-weight:700; margin:4px 0; } .tt p { font-size:24px; color:var(--dim); margin:4px 0; }
   .tt .hold { height:18px; width:520px; margin:12px auto; background:rgba(255,255,255,.12); border-radius:9px; overflow:hidden; } .tt .hold i { display:block; height:100%; width:0; background:var(--good); }
   .tt #ttcount { font-size:22px; }
-  .res .roast { font-size:110px; line-height:1; margin:6px 0; position:relative; display:inline-block; }
-  .res .roast span { position:absolute; right:-40px; bottom:-10px; font-size:70px; animation:pulse .3s infinite alternate; }
+  .res .roast { line-height:1; margin:6px 0; position:relative; display:inline-block; }
+  .res .roast .av { width:150px; height:150px; } .res .roast > .ic { width:120px; height:120px; }
+  .res .roast span { position:absolute; right:-40px; bottom:-10px; color:#ff6a2a; animation:pulse .3s infinite alternate; } .res .roast span .ic { width:80px; height:80px; }
   .awards { display:flex; flex-direction:column; gap:10px; margin:18px auto 10px; text-align:left; max-width:700px; }
   .aw { display:flex; gap:14px; align-items:center; background:rgba(255,255,255,.08); padding:10px 16px; border-radius:16px; font-size:22px; }
-  .aw .aem { font-size:44px; } .aw small { color:var(--dim); }
+  .aw .aem { color:var(--gold); display:flex; } .aw .aem .ic { width:44px; height:44px; } .aw small { color:var(--dim); }
   .awards h3 { text-align:center; margin:0; font-size:28px; }
   #tvbtn { position:absolute; right:40px; bottom:30px; font:inherit; font-size:24px; font-weight:700; padding:12px 26px; border:0; border-radius:14px; background:var(--gold); color:#2b1d00; cursor:pointer; pointer-events:auto; display:none; }
   body[data-phase="result"] #tvbtn, body[data-phase="gameover"] #tvbtn { display:block; }
@@ -108,7 +116,7 @@
 
   <div id="lobby" hidden>
     <div class="left">
-      <h1>Don't Wake the Dragon <small>Tonight's dragon: <b id="dragonname">…</b> 🐉</small></h1>
+      <h1>Don't Wake the Dragon <small>Tonight's dragon: <b id="dragonname">…</b></small></h1>
       <div id="qr"></div>
       <div id="code">····</div>
       <div id="url">…</div>
@@ -118,24 +126,25 @@
       <div id="players"></div>
       <button id="start" disabled>Waiting for sneaks…</button>
       <div class="opts">
-        <label>Dragon hearing: <select id="sens"><option value="chill">Chill (little kids)</option><option value="normal" selected>Normal</option><option value="hardcore">Hardcore</option></select></label>
-        <button id="mute" data-on="0">🔊 Sound</button>
-        <button id="tts" data-on="1">🗣️ Sleep-talk on</button>
+        <label>Dragon hearing: <select id="sens"></select></label>
+        <button id="mute" data-on="0"><svg class="ic" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9Z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Sound</button>
+        <button id="tts" data-on="1"><svg class="ic" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-5 4v-4H4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 9h8M8 12.5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Sleep-talk on</button>
       </div>
-      <div class="howto">Scan the code with each phone → pick a name → tap <b>Join</b> and allow motion. One player is the 🥷 Thief (a job on their phone), everyone else is a 👀 Lookout: hold your phone dead still. Every wobble feeds the dragon's ear.</div>
+      <div class="howto">Scan the code with each phone, pick a name, tap <b>Join</b> and allow motion. One player is the <b>Thief</b> (a job on their phone), everyone else is a <b>Lookout</b>: hold your phone dead still. Every wobble feeds the dragon's ear, with your name on it.</div>
+      <div class="howto" id="hearing"></div>
     </div>
   </div>
 
   <div id="hud" hidden>
     <div id="top">
-      <div><div id="title"></div><div id="flavor"></div></div>
-      <div><div id="loot">🏦 0</div><div id="lootbar"></div></div>
+      <div><div id="title"></div><div id="flavor"></div><div id="hearingtag"></div></div>
+      <div><div id="loot">0 banked</div><div id="lootbar"></div></div>
     </div>
-    <div id="nap"><div id="napfill"></div></div>
+    <div id="nap"><div id="napfill"></div><span class="napic moon"><svg class="ic" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" fill="currentColor"/></svg></span><span class="napic sun"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></div>
     <div id="meter">
       <div id="meterlabel">Deep snore</div>
       <div id="meterbar"><div id="meterfill"></div></div>
-      <ul id="stagelist"><li>😴 snore</li><li>😬 twitch</li><li>😖 mumble</li><li>👁️ eye</li><li>🔥 AWAKE</li></ul>
+      <ul id="stagelist"><li>snore</li><li>twitch</li><li>mumble</li><li>one eye</li><li>AWAKE</li></ul>
     </div>
     <div id="speech" hidden></div>
     <div id="toast" hidden></div>
@@ -149,6 +158,7 @@
 </div>
 <script src="vendor/mqtt.min.js"></script>
 <script src="vendor/qrcode.js"></script>
+<script src="js/art.js"></script>
 <script src="js/shared.js"></script>
 <script src="js/tv-audio.js"></script>
 <script src="js/tv-dragon.js"></script>

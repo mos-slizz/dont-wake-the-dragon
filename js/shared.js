@@ -4,7 +4,7 @@
   'use strict';
 
   const DWTD = {};
-  DWTD.VERSION = '0.1.0';
+  DWTD.VERSION = '0.2.0';
   DWTD.PROTO = 'dwtd1';
 
   // Public MQTT-over-WebSockets brokers. No backend to run. First one that connects wins.
@@ -117,17 +117,17 @@
   // The heist ladder. Difficulty escalates. {dragon} = dragon name.
   DWTD.HEISTS = [
     { n: 1, title: 'The Coin Jar', flavor: '{dragon}\'s spare change. Just a warm-up.',
-      items: 2, napSec: 80, creep: 0.8, decay: 9, sens: 0.85, tiptoe: 2, loot: 100 },
+      items: 2, napSec: 70, creep: 1.2, decay: 6, sens: 1.0, tiptoe: 2, loot: 100 },
     { n: 2, title: 'The Golden Goblet', flavor: 'Still has dragon backwash in it. Worth a fortune.',
-      items: 3, napSec: 85, creep: 1.0, decay: 8, sens: 1.0, tiptoe: 2, loot: 200 },
+      items: 3, napSec: 75, creep: 1.6, decay: 5.5, sens: 1.1, tiptoe: 2, loot: 200 },
     { n: 3, title: 'The Goose Egg', flavor: 'A golden egg. Do NOT drop it. It hums.',
-      items: 3, napSec: 85, creep: 1.3, decay: 7.5, sens: 1.1, tiptoe: 3, loot: 300 },
+      items: 3, napSec: 75, creep: 2.0, decay: 5, sens: 1.2, tiptoe: 3, loot: 300 },
     { n: 4, title: 'The Enchanted Sword', flavor: 'It sings when you touch it. Loudly. Ugh.',
-      items: 4, napSec: 90, creep: 1.6, decay: 7, sens: 1.2, tiptoe: 3, loot: 450 },
+      items: 4, napSec: 80, creep: 2.4, decay: 4.5, sens: 1.3, tiptoe: 3, loot: 450 },
     { n: 5, title: '{dragon}\'s Toothbrush', flavor: 'Solid gold. Slightly used. Deeply personal.',
-      items: 4, napSec: 90, creep: 1.9, decay: 6.5, sens: 1.3, tiptoe: 3, loot: 600 },
+      items: 4, napSec: 80, creep: 2.8, decay: 4, sens: 1.4, tiptoe: 3, loot: 600 },
     { n: 6, title: 'THE CROWN', flavor: 'It\'s on the dragon\'s head. Yes, really.',
-      items: 5, napSec: 100, creep: 2.2, decay: 6, sens: 1.45, tiptoe: 4, loot: 1000 },
+      items: 5, napSec: 90, creep: 3.2, decay: 3.6, sens: 1.5, tiptoe: 4, loot: 1000 },
   ];
 
   // Sleep stages. Meter thresholds to enter; hysteresis to leave.
@@ -143,22 +143,22 @@
   DWTD.EYE_SENS = 1.7;      // noise counts this much more while the eye is open
 
   // Tuning presets chosen on the TV. `sens` multiplies incoming wobble.
-  DWTD.SENSITIVITY = { chill: 0.6, normal: 1.0, hardcore: 1.6 };
+  DWTD.HEARING = [['Chill', 0.7], ['Normal', 1.0], ['Sharp', 1.4], ['Hardcore', 2.0]];
 
   DWTD.TIERS = [
-    { key: 'hatch',  label: 'Hatchling', sub: 'ages 5–7',  em: '🐣' },
-    { key: 'squire', label: 'Squire',    sub: 'ages 8–10', em: '🛡️' },
-    { key: 'knight', label: 'Knight',    sub: 'ages 11–14', em: '⚔️' },
-    { key: 'wizard', label: 'Old Wizard', sub: 'grown-ups', em: '🧙' },
+    { key: 'hatch',  label: 'Hatchling', sub: 'ages 5–7',  icon: 'egg' },
+    { key: 'squire', label: 'Squire',    sub: 'ages 8–10', icon: 'shield' },
+    { key: 'knight', label: 'Knight',    sub: 'ages 11–14', icon: 'sword' },
+    { key: 'wizard', label: 'Old Wizard', sub: 'grown-ups', icon: 'wand' },
   ];
-  DWTD.AVATARS = ['🦊', '🐸', '🐱', '🐼', '🦄', '🐙', '🐧', '🦁', '🐰', '🐨', '🦖', '🐷', '🐵', '🦉', '🐯', '🐲'];
+  DWTD.AVATARS = (window.ART && ART.AVATAR_KEYS) || ['fox'];
 
   DWTD.AWARDS = {
-    steady: { title: 'Steadiest Hands', em: '🗿', blurb: 'Basically a rock with a phone.' },
-    shushed: { title: 'Most Shushed', em: '🤫', blurb: 'The dragon knows your name now.' },
-    clutch: { title: 'Clutch Thief', em: '🧤', blurb: 'Fingers of a surgeon. A sneaky surgeon.' },
-    butter: { title: 'Butterfingers', em: '🧈', blurb: 'CLANG. CLANG. CLANG.' },
-    tiptoe: { title: 'Ballet Legend', em: '🩰', blurb: 'First to nail the tiptoe.' },
+    steady: { title: 'Steadiest Hands', icon: 'rock', blurb: 'Basically a rock with a phone.' },
+    shushed: { title: 'Most Shushed', icon: 'hush', blurb: 'The dragon knows your name now.' },
+    clutch: { title: 'Clutch Thief', icon: 'glove', blurb: 'Fingers of a surgeon. A sneaky surgeon.' },
+    butter: { title: 'Butterfingers', icon: 'butter', blurb: 'CLANG. CLANG. CLANG.' },
+    tiptoe: { title: 'Ballet Legend', icon: 'shoe', blurb: 'First to nail the tiptoe.' },
   };
 
   // ---------- helpers ----------

@@ -170,8 +170,11 @@
       ctx.beginPath(); for (let i = 0; i <= this.idx; i++) { const p = this.path[i]; i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
       ctx.strokeStyle = 'rgba(125,255,160,.45)'; ctx.lineWidth = this.wpx(); ctx.stroke();
       // checkpoint & end
-      const end = this.path[this.path.length - 1]; ctx.font = `${34 * devicePixelRatio}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('💰', end.x, end.y); ctx.fillText('🕳️', this.path[0].x, this.path[0].y);
+      const end = this.path[this.path.length - 1], st = this.path[0], u = devicePixelRatio;
+      // start: a dark hole; end: a coin pile
+      ctx.fillStyle = '#0b0716'; ctx.beginPath(); ctx.ellipse(st.x, st.y, 22 * u, 12 * u, 0, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#3b2d5e'; ctx.lineWidth = 3 * u; ctx.stroke();
+      [[-14, 6], [0, 8], [14, 6], [-7, 0], [7, 0], [0, -7]].forEach(([dx, dy]) => { ctx.fillStyle = '#a87a18'; ctx.beginPath(); ctx.ellipse(end.x + dx * u, end.y + dy * u + 2 * u, 11 * u, 6 * u, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#f6c945'; ctx.beginPath(); ctx.ellipse(end.x + dx * u, end.y + dy * u, 11 * u, 6 * u, 0, 0, 7); ctx.fill(); ctx.strokeStyle = '#a87a18'; ctx.lineWidth = 1.5 * u; ctx.stroke(); });
       // gem
       const g = this.gemPos(); const r = this.wpx() * 0.42;
       ctx.beginPath(); ctx.moveTo(g.x, g.y - r); ctx.lineTo(g.x + r, g.y); ctx.lineTo(g.x, g.y + r); ctx.lineTo(g.x - r, g.y); ctx.closePath();
